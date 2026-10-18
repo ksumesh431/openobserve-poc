@@ -65,3 +65,13 @@ kubectl wait --for=condition=complete job/provision-o2-dashboard-cluster -n open
 ```
 
 Jobs are idempotent — they update the dashboard if it already exists.
+
+## Teardown
+
+Deletes the cluster and everything in it (OpenObserve, collector, dashboards, registry):
+
+```powershell
+k3d cluster delete --config k3d-cluster.yaml
+```
+
+Verify with `k3d cluster list` (should be empty).
