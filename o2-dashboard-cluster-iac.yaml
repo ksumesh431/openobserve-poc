@@ -1,0 +1,421 @@
+# IaC: K3s Cluster Overview dashboard for OpenObserve (self-contained: Secret + ConfigMap + provisioning Job)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: o2-auth
+  namespace: openobserve
+type: Opaque
+stringData:
+  auth: "admin@local.dev:ComplexPassword123!" # user:pass; curl -u base64-encodes this
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: o2-dashboard-cluster-json
+  namespace: openobserve
+data:
+  dashboard.json: |
+    {
+      "version": 2,
+      "dashboardId": "k3s-cluster-overview-iac",
+      "title": "K3s Cluster Overview (IaC)",
+      "description": "Declaratively provisioned K3s node uptime and resource metrics",
+      "variables": { "list": [] },
+      "panels": [
+        {
+          "id": "panel_max_node_uptime",
+          "type": "metric",
+          "title": "Max Node Uptime (s)",
+          "description": "Highest uptime among all nodes",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "max(k8s_node_uptime)",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_node_uptime",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 0, "y": 0, "w": 4, "h": 4, "i": 1 }
+        },
+        {
+          "id": "panel_reporting_nodes",
+          "type": "metric",
+          "title": "Reporting Nodes",
+          "description": "Number of nodes currently reporting uptime",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "count(k8s_node_uptime)",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_node_uptime",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 4, "y": 0, "w": 4, "h": 4, "i": 2 }
+        },
+        {
+          "id": "panel_max_node_cpu",
+          "type": "metric",
+          "title": "Max Node CPU Usage (cores)",
+          "description": "Highest CPU usage across nodes",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "max(k8s_node_cpu_usage)",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_node_cpu_usage",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 8, "y": 0, "w": 4, "h": 4, "i": 3 }
+        },
+        {
+          "id": "panel_node_uptime_table",
+          "type": "table",
+          "title": "Node Uptime by Node (s)",
+          "description": "Per-node uptime reported by kubeletstats",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "max by (k8s_node_name) (k8s_node_uptime)",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_node_uptime",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 0, "y": 4, "w": 12, "h": 5, "i": 4 }
+        },
+        {
+          "id": "panel_node_cpu",
+          "type": "area",
+          "title": "Node CPU Usage by Node",
+          "description": "CPU usage per node over time",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "max by (k8s_node_name) (k8s_node_cpu_usage)",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_node_cpu_usage",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 0, "y": 9, "w": 6, "h": 5, "i": 5 }
+        },
+        {
+          "id": "panel_node_memory",
+          "type": "area",
+          "title": "Node Memory Working Set by Node (bytes)",
+          "description": "Memory working set per node over time",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "max by (k8s_node_name) (k8s_node_memory_working_set)",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_node_memory_working_set",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 6, "y": 9, "w": 6, "h": 5, "i": 6 }
+        },
+        {
+          "id": "panel_node_filesystem",
+          "type": "area",
+          "title": "Node Filesystem Usage by Node (bytes)",
+          "description": "Filesystem usage per node over time",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "max by (k8s_node_name) (k8s_node_filesystem_usage)",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_node_filesystem_usage",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 0, "y": 14, "w": 6, "h": 5, "i": 7 }
+        },
+        {
+          "id": "panel_node_network",
+          "type": "area",
+          "title": "Node Network I/O by Node (bytes)",
+          "description": "Network I/O per node split by direction",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "max by (k8s_node_name, direction) (k8s_node_network_io)",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_node_network_io",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 6, "y": 14, "w": 6, "h": 5, "i": 8 }
+        }
+      ]
+    }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: provision-o2-dashboard-cluster
+  namespace: openobserve
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 2
+  activeDeadlineSeconds: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: curl-provisioner
+          image: curlimages/curl:8.10.1
+          env:
+            - name: O2_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: o2-auth
+                  key: auth
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              BASE="http://openobserve-standalone.openobserve.svc.cluster.local:5080"
+              API="${BASE}/api/default"
+              DASH_TITLE="K3s Cluster Overview (IaC)"
+
+              echo "Waiting for OpenObserve API..."
+              i=0
+              until curl -sf -o /dev/null "$BASE/healthz"; do
+                i=$((i+1))
+                if [ "$i" -gt 100 ]; then
+                  echo "ERROR: OpenObserve API unreachable"
+                  exit 1
+                fi
+                sleep 3
+              done
+
+              # Upsert loop: look up server-assigned id by unique title, PUT if exists, else POST.
+              # Retries to ride out transient OpenObserve auth/validation hiccups.
+              ATTEMPT=0
+              while true; do
+                ATTEMPT=$((ATTEMPT+1))
+                LIST=$(curl -s -u "$O2_AUTH" "$API/dashboards")
+                ITEM=$(echo "$LIST" | tr '{' '\n' | grep "\"dashboard_id\":\"[^\"]*\",\"title\":\"$DASH_TITLE\"" | head -n1)
+                EXISTING_ID=$(echo "$ITEM" | sed 's/.*"dashboard_id":"\([^"]*\)".*/\1/')
+                EXISTING_HASH=$(echo "$ITEM" | sed 's/.*"hash":"\([^"]*\)".*/\1/')
+
+                if [ -n "$EXISTING_ID" ]; then
+                  echo "Dashboard '$DASH_TITLE' exists (id $EXISTING_ID) - updating"
+                  METHOD="PUT"
+                  URL="$API/dashboards/$EXISTING_ID?hash=$EXISTING_HASH"
+                else
+                  echo "Dashboard '$DASH_TITLE' not found - creating"
+                  METHOD="POST"
+                  URL="$API/dashboards"
+                fi
+
+                CODE=$(curl -s -o /tmp/o2-resp.json -w '%{http_code}' \
+                  -X "$METHOD" \
+                  -u "$O2_AUTH" \
+                  -H "Content-Type: application/json" \
+                  -d @/config/dashboard.json \
+                  "$URL")
+
+                echo "HTTP $CODE"
+                if [ "$CODE" = "200" ] || [ "$CODE" = "201" ]; then
+                  cat /tmp/o2-resp.json
+                  echo ""
+                  echo "Dashboard provisioning succeeded: $DASH_TITLE"
+                  exit 0
+                fi
+                cat /tmp/o2-resp.json
+                echo ""
+                if [ "$ATTEMPT" -ge 5 ]; then
+                  echo "ERROR: dashboard provisioning failed after $ATTEMPT attempts (last HTTP $CODE)"
+                  exit 1
+                fi
+                echo "Retrying in 5s..."
+                sleep 5
+              done
+          volumeMounts:
+            - name: dashboard-vol
+              mountPath: /config
+      volumes:
+        - name: dashboard-vol
+          configMap:
+            name: o2-dashboard-cluster-json

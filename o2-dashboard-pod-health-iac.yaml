@@ -1,0 +1,347 @@
+# IaC: K3s Pod & Workload Health dashboard for OpenObserve (self-contained: Secret + ConfigMap + provisioning Job)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: o2-auth
+  namespace: openobserve
+type: Opaque
+stringData:
+  auth: "admin@local.dev:ComplexPassword123!" # user:pass; curl -u base64-encodes this
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: o2-dashboard-pod-health-json
+  namespace: openobserve
+data:
+  dashboard.json: |
+    {
+      "version": 2,
+      "dashboardId": "k3s-pod-health-iac",
+      "title": "K3s Pod & Workload Health (IaC)",
+      "description": "Declaratively provisioned pod uptime, resource usage and network metrics",
+      "variables": { "list": [] },
+      "panels": [
+        {
+          "id": "panel_pod_uptime_table",
+          "type": "table",
+          "title": "Pod Uptime by Pod (s)",
+          "description": "Per-pod uptime - low values indicate recent restarts",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "max by (k8s_namespace_name, k8s_pod_name) (k8s_pod_uptime)",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_uptime",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 0, "y": 0, "w": 12, "h": 6, "i": 1 }
+        },
+        {
+          "id": "panel_pod_cpu_ns",
+          "type": "area",
+          "title": "CPU Usage by Namespace",
+          "description": "Aggregate pod CPU usage per namespace over time",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "sum by (k8s_namespace_name) (k8s_pod_cpu_usage)",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_cpu_usage",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 0, "y": 6, "w": 6, "h": 5, "i": 2 }
+        },
+        {
+          "id": "panel_pod_mem_ns",
+          "type": "area",
+          "title": "Memory Working Set by Namespace (bytes)",
+          "description": "Aggregate pod memory per namespace over time",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "sum by (k8s_namespace_name) (k8s_pod_memory_working_set)",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_memory_working_set",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 6, "y": 6, "w": 6, "h": 5, "i": 3 }
+        },
+        {
+          "id": "panel_top_pods_cpu",
+          "type": "table",
+          "title": "Top 10 Pods by CPU",
+          "description": "Highest pod CPU usage across the cluster",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "topk(10, max by (k8s_namespace_name, k8s_pod_name) (k8s_pod_cpu_usage))",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_cpu_usage",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 0, "y": 11, "w": 6, "h": 5, "i": 4 }
+        },
+        {
+          "id": "panel_top_pods_mem",
+          "type": "table",
+          "title": "Top 10 Pods by Memory",
+          "description": "Highest pod memory working set across the cluster",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "topk(10, max by (k8s_namespace_name, k8s_pod_name) (k8s_pod_memory_working_set))",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_memory_working_set",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 6, "y": 11, "w": 6, "h": 5, "i": 5 }
+        },
+        {
+          "id": "panel_pod_network",
+          "type": "area",
+          "title": "Pod Network I/O by Namespace (bytes)",
+          "description": "Pod network I/O aggregated per namespace",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "max by (k8s_namespace_name) (k8s_pod_network_io)",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_network_io",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 0, "y": 16, "w": 12, "h": 5, "i": 6 }
+        }
+      ]
+    }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: provision-o2-dashboard-pod-health
+  namespace: openobserve
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 2
+  activeDeadlineSeconds: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: curl-provisioner
+          image: curlimages/curl:8.10.1
+          env:
+            - name: O2_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: o2-auth
+                  key: auth
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              BASE="http://openobserve-standalone.openobserve.svc.cluster.local:5080"
+              API="${BASE}/api/default"
+              DASH_TITLE="K3s Pod & Workload Health (IaC)"
+
+              echo "Waiting for OpenObserve API..."
+              i=0
+              until curl -sf -o /dev/null "$BASE/healthz"; do
+                i=$((i+1))
+                if [ "$i" -gt 100 ]; then
+                  echo "ERROR: OpenObserve API unreachable"
+                  exit 1
+                fi
+                sleep 3
+              done
+
+              # Upsert loop: look up server-assigned id by unique title, PUT if exists, else POST.
+              # Retries to ride out transient OpenObserve auth/validation hiccups.
+              ATTEMPT=0
+              while true; do
+                ATTEMPT=$((ATTEMPT+1))
+                LIST=$(curl -s -u "$O2_AUTH" "$API/dashboards")
+                ITEM=$(echo "$LIST" | tr '{' '\n' | grep "\"dashboard_id\":\"[^\"]*\",\"title\":\"$DASH_TITLE\"" | head -n1)
+                EXISTING_ID=$(echo "$ITEM" | sed 's/.*"dashboard_id":"\([^"]*\)".*/\1/')
+                EXISTING_HASH=$(echo "$ITEM" | sed 's/.*"hash":"\([^"]*\)".*/\1/')
+
+                if [ -n "$EXISTING_ID" ]; then
+                  echo "Dashboard '$DASH_TITLE' exists (id $EXISTING_ID) - updating"
+                  METHOD="PUT"
+                  URL="$API/dashboards/$EXISTING_ID?hash=$EXISTING_HASH"
+                else
+                  echo "Dashboard '$DASH_TITLE' not found - creating"
+                  METHOD="POST"
+                  URL="$API/dashboards"
+                fi
+
+                CODE=$(curl -s -o /tmp/o2-resp.json -w '%{http_code}' \
+                  -X "$METHOD" \
+                  -u "$O2_AUTH" \
+                  -H "Content-Type: application/json" \
+                  -d @/config/dashboard.json \
+                  "$URL")
+
+                echo "HTTP $CODE"
+                if [ "$CODE" = "200" ] || [ "$CODE" = "201" ]; then
+                  cat /tmp/o2-resp.json
+                  echo ""
+                  echo "Dashboard provisioning succeeded: $DASH_TITLE"
+                  exit 0
+                fi
+                cat /tmp/o2-resp.json
+                echo ""
+                if [ "$ATTEMPT" -ge 5 ]; then
+                  echo "ERROR: dashboard provisioning failed after $ATTEMPT attempts (last HTTP $CODE)"
+                  exit 1
+                fi
+                echo "Retrying in 5s..."
+                sleep 5
+              done
+          volumeMounts:
+            - name: dashboard-vol
+          volumeMounts:
+            - name: dashboard-vol
+              mountPath: /config
+      volumes:
+        - name: dashboard-vol
+          configMap:
+            name: o2-dashboard-pod-health-json

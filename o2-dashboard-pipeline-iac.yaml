@@ -1,0 +1,417 @@
+# IaC: OpenObserve Telemetry Pipeline Health dashboard (self-contained: Secret + ConfigMap + provisioning Job)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: o2-auth
+  namespace: openobserve
+type: Opaque
+stringData:
+  auth: "admin@local.dev:ComplexPassword123!" # user:pass; curl -u base64-encodes this
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: o2-dashboard-pipeline-json
+  namespace: openobserve
+data:
+  dashboard.json: |
+    {
+      "version": 2,
+      "dashboardId": "o2-telemetry-pipeline-iac",
+      "title": "OpenObserve Telemetry Pipeline Health (IaC)",
+      "description": "Declaratively provisioned health of the OTel Collector to OpenObserve pipeline",
+      "variables": { "list": [] },
+      "panels": [
+        {
+          "id": "panel_collector_uptime",
+          "type": "metric",
+          "title": "Collector Uptime (s)",
+          "description": "Uptime of the OpenTelemetry Collector process",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "max(otelcol_process_uptime)",
+              "customQuery": true,
+              "fields": {
+                "stream": "otelcol_process_uptime",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 0, "y": 0, "w": 4, "h": 4, "i": 1 }
+        },
+        {
+          "id": "panel_points_received",
+          "type": "metric",
+          "title": "Metric Points Received (cum.)",
+          "description": "Total metric points accepted by the collector",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "max(otelcol_receiver_accepted_metric_points)",
+              "customQuery": true,
+              "fields": {
+                "stream": "otelcol_receiver_accepted_metric_points",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 4, "y": 0, "w": 4, "h": 4, "i": 2 }
+        },
+        {
+          "id": "panel_points_exported",
+          "type": "metric",
+          "title": "Metric Points Exported (cum.)",
+          "description": "Total metric points sent to OpenObserve",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "max(otelcol_exporter_sent_metric_points)",
+              "customQuery": true,
+              "fields": {
+                "stream": "otelcol_exporter_sent_metric_points",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 8, "y": 0, "w": 4, "h": 4, "i": 3 }
+        },
+        {
+          "id": "panel_points_refused",
+          "type": "metric",
+          "title": "Refused Metric Points (0 = healthy)",
+          "description": "Metric points refused by receivers - should stay at zero",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "max(otelcol_receiver_refused_metric_points)",
+              "customQuery": true,
+              "fields": {
+                "stream": "otelcol_receiver_refused_metric_points",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 0, "y": 4, "w": 4, "h": 4, "i": 4 }
+        },
+        {
+          "id": "panel_metric_rate",
+          "type": "area",
+          "title": "Metric Point Rate (points/s)",
+          "description": "Metric points received vs exported per second",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "rate(otelcol_receiver_accepted_metric_points[1m])",
+              "customQuery": true,
+              "fields": {
+                "stream": "otelcol_receiver_accepted_metric_points",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            },
+            {
+              "query": "rate(otelcol_exporter_sent_metric_points[1m])",
+              "customQuery": true,
+              "fields": {
+                "stream": "otelcol_exporter_sent_metric_points",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 4, "y": 4, "w": 8, "h": 4, "i": 5 }
+        },
+        {
+          "id": "panel_log_rate",
+          "type": "area",
+          "title": "Log Record Rate (records/s)",
+          "description": "Log records received vs exported per second",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "promql",
+          "queries": [
+            {
+              "query": "rate(otelcol_receiver_accepted_log_records[1m])",
+              "customQuery": true,
+              "fields": {
+                "stream": "otelcol_receiver_accepted_log_records",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            },
+            {
+              "query": "rate(otelcol_exporter_sent_log_records[1m])",
+              "customQuery": true,
+              "fields": {
+                "stream": "otelcol_exporter_sent_log_records",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 0, "y": 8, "w": 12, "h": 5, "i": 6 }
+        },
+        {
+          "id": "panel_log_volume",
+          "type": "area",
+          "title": "Log Volume by Namespace (records/min)",
+          "description": "K3s container log records per minute by namespace",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": null,
+            "unit_custom": null,
+            "decimals": null,
+            "axis_width": null,
+            "axis_border_show": null,
+            "legend_width": null,
+            "base_map": null,
+            "map_view": null
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT histogram(_timestamp, '1 minute') AS \"time\", k8s_namespace_name AS \"namespace\", count(*) AS \"logs\" FROM \"k3s_logs\" GROUP BY \"time\", \"namespace\"",
+              "customQuery": true,
+              "fields": {
+                "stream": "k3s_logs",
+                "stream_type": "logs",
+                "x": [],
+                "y": [],
+                "z": null,
+                "latitude": null,
+                "longitude": null,
+                "weight": null,
+                "filter": []
+              },
+              "config": { "promql_legend": "" }
+            }
+          ],
+          "layout": { "x": 0, "y": 13, "w": 12, "h": 6, "i": 7 }
+        }
+      ]
+    }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: provision-o2-dashboard-pipeline
+  namespace: openobserve
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 2
+  activeDeadlineSeconds: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: curl-provisioner
+          image: curlimages/curl:8.10.1
+          env:
+            - name: O2_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: o2-auth
+                  key: auth
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              BASE="http://openobserve-standalone.openobserve.svc.cluster.local:5080"
+              API="${BASE}/api/default"
+              DASH_TITLE="OpenObserve Telemetry Pipeline Health (IaC)"
+
+              echo "Waiting for OpenObserve API..."
+              i=0
+              until curl -sf -o /dev/null "$BASE/healthz"; do
+                i=$((i+1))
+                if [ "$i" -gt 100 ]; then
+                  echo "ERROR: OpenObserve API unreachable"
+                  exit 1
+                fi
+                sleep 3
+              done
+
+              # Upsert loop: look up server-assigned id by unique title, PUT if exists, else POST.
+              # Retries to ride out transient OpenObserve auth/validation hiccups.
+              ATTEMPT=0
+              while true; do
+                ATTEMPT=$((ATTEMPT+1))
+                LIST=$(curl -s -u "$O2_AUTH" "$API/dashboards")
+                ITEM=$(echo "$LIST" | tr '{' '\n' | grep "\"dashboard_id\":\"[^\"]*\",\"title\":\"$DASH_TITLE\"" | head -n1)
+                EXISTING_ID=$(echo "$ITEM" | sed 's/.*"dashboard_id":"\([^"]*\)".*/\1/')
+                EXISTING_HASH=$(echo "$ITEM" | sed 's/.*"hash":"\([^"]*\)".*/\1/')
+
+                if [ -n "$EXISTING_ID" ]; then
+                  echo "Dashboard '$DASH_TITLE' exists (id $EXISTING_ID) - updating"
+                  METHOD="PUT"
+                  URL="$API/dashboards/$EXISTING_ID?hash=$EXISTING_HASH"
+                else
+                  echo "Dashboard '$DASH_TITLE' not found - creating"
+                  METHOD="POST"
+                  URL="$API/dashboards"
+                fi
+
+                CODE=$(curl -s -o /tmp/o2-resp.json -w '%{http_code}' \
+                  -X "$METHOD" \
+                  -u "$O2_AUTH" \
+                  -H "Content-Type: application/json" \
+                  -d @/config/dashboard.json \
+                  "$URL")
+
+                echo "HTTP $CODE"
+                if [ "$CODE" = "200" ] || [ "$CODE" = "201" ]; then
+                  cat /tmp/o2-resp.json
+                  echo ""
+                  echo "Dashboard provisioning succeeded: $DASH_TITLE"
+                  exit 0
+                fi
+                cat /tmp/o2-resp.json
+                echo ""
+                if [ "$ATTEMPT" -ge 5 ]; then
+                  echo "ERROR: dashboard provisioning failed after $ATTEMPT attempts (last HTTP $CODE)"
+                  exit 1
+                fi
+                echo "Retrying in 5s..."
+                sleep 5
+              done
+          volumeMounts:
+            - name: dashboard-vol
+          volumeMounts:
+            - name: dashboard-vol
+              mountPath: /config
+      volumes:
+        - name: dashboard-vol
+          configMap:
+            name: o2-dashboard-pipeline-json
